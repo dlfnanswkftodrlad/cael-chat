@@ -5,36 +5,32 @@ export default async function handler(req, res) {
 
   try {
     const { system, messages } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
-    const model = 'gemini-2.0-flash-001';
+    const apiKey = process.env.OPENROUTER_API_KEY;
 
-    const contents = messages.map(function(m) {
-      return {
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }]
-      };
-    });
+    const chatMessages = [{ role: 'system', content: system }];
+    for (const m of messages) {
+      chatMessages.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content });
+    }
 
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey;
-
-    const response = await fetch(url, {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
       body: JSON.stringify({
-        contents: contents,
-        systemInstruction: { parts: [{ text: system }] }
+        model: 'meta-llama/llama-3.1-8b-instruct:free',
+        messages: chatMessages
       })
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      return res.status(response.status).json({ error: { message: (data.error && data.error.message) || 'Gemini API error' } });
+      return res.status(response.status).json({ error: { message: (data.error && data.error.message) || 'OpenRouter API error' } });
     }
 
-    const candidate = data.candidates && data.candidates[0];
-    const parts = candidate && candidate.content && candidate.content.parts;
-    const reply = parts ? parts.map(function(p){ return p.text; }).join('\n') : '';
+    const reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
 
     return res.status(200).json({ content: [{ type: 'text', text: reply }] });
   } catch (e) {
