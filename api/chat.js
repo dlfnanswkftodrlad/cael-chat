@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   try {
     const { system, messages } = req.body;
     const apiKey = process.env.GEMINI_API_KEY;
-    const model = 'gemini-1.5-flash';
+    const model = 'gemini-2.0-flash-001';
 
     const contents = messages.map(function(m) {
       return {
